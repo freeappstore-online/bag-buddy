@@ -3,6 +3,7 @@ import { Shell } from "./components/Shell";
 import { Checklist } from "./components/Checklist";
 import { ManageItems } from "./components/ManageItems";
 import { Settings } from "./components/Settings";
+import { ParentDashboard } from "./components/ParentDashboard";
 import { BuddyMascot } from "./components/BuddyMascot";
 import type { ChecklistItem, DayState, SchoolSettings, WeekDay } from "./types";
 import { DEFAULT_SETTINGS } from "./types";
@@ -45,7 +46,7 @@ function getTodayWeekDay(): WeekDay | null {
   return d as WeekDay;
 }
 
-type View = "checklist" | "manage" | "settings";
+type View = "checklist" | "manage" | "parent" | "settings";
 
 export default function App() {
   const [items, setItems] = useState<ChecklistItem[]>(() => {
@@ -141,6 +142,7 @@ export default function App() {
   const navItems = [
     { id: "checklist" as View, label: "Today", emoji: "🎒" },
     { id: "manage" as View, label: "My Items", emoji: "📋" },
+    { id: "parent" as View, label: "Parent", emoji: "👨‍👩‍👧" },
     { id: "settings" as View, label: "Settings", emoji: "⚙️" },
   ];
 
@@ -180,6 +182,17 @@ export default function App() {
       )}
       {view === "manage" && (
         <ManageItems items={items} setItems={setItems} />
+      )}
+      {view === "parent" && (
+        <ParentDashboard
+          items={effectiveItems}
+          checkedIds={dayState.checked}
+          settings={settings}
+          checkedCount={checkedCount}
+          totalItems={totalItems}
+          allDone={allDone}
+          onReset={resetDay}
+        />
       )}
       {view === "settings" && (
         <Settings settings={settings} onSave={setSettings} />
