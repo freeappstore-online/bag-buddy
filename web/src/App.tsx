@@ -126,8 +126,6 @@ export default function App() {
     if (allDone && !justCompleted) {
       setCelebrating(true);
       setJustCompleted(true);
-      const t = setTimeout(() => setCelebrating(false), 4000);
-      return () => clearTimeout(t);
     }
     if (!allDone) {
       setJustCompleted(false);
@@ -155,7 +153,16 @@ export default function App() {
       onNavChange={(v) => setView(v as View)}
       appName="Bag Buddy"
     >
-      {celebrating && <Celebration name={studentName} />}
+      {celebrating && (
+        <Celebration
+          name={studentName}
+          onClose={() => setCelebrating(false)}
+          onReset={() => {
+            resetDay();
+            setCelebrating(false);
+          }}
+        />
+      )}
 
       {view === "checklist" && (
         <Checklist
@@ -181,17 +188,23 @@ export default function App() {
   );
 }
 
-function Celebration({ name }: { name?: string }) {
+interface CelebrationProps {
+  name?: string;
+  onClose: () => void;
+  onReset: () => void;
+}
+
+function Celebration({ name, onClose, onReset }: CelebrationProps) {
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
-      style={{ background: "rgba(0,0,0,0.35)" }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.5)" }}
     >
       <div
-        className="pointer-events-auto rounded-3xl p-8 flex flex-col items-center gap-4 mx-4 animate-bounce-in"
+        className="rounded-3xl p-8 flex flex-col items-center gap-4 mx-4"
         style={{
           background: "var(--paper)",
-          boxShadow: "0 8px 48px rgba(0,0,0,0.25)",
+          boxShadow: "0 8px 48px rgba(0,0,0,0.3)",
           maxWidth: 340,
           width: "100%",
         }}
@@ -213,6 +226,32 @@ function Celebration({ name }: { name?: string }) {
               {e}
             </span>
           ))}
+        </div>
+
+        {/* Buttons */}
+        <div className="flex flex-col gap-2 w-full mt-2">
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl font-bold text-base transition-all active:scale-95"
+            style={{
+              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              color: "white",
+              border: "none",
+            }}
+          >
+            ← Back to Checklist
+          </button>
+          <button
+            onClick={onReset}
+            className="w-full py-3 rounded-2xl font-bold text-sm transition-all active:scale-95"
+            style={{
+              background: "var(--panel)",
+              color: "var(--muted)",
+              border: "1.5px solid var(--line)",
+            }}
+          >
+            🔄 Reset & Start Again
+          </button>
         </div>
       </div>
     </div>
