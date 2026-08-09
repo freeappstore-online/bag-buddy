@@ -5,9 +5,10 @@ import { ManageItems } from "./components/ManageItems";
 import { Settings } from "./components/Settings";
 import { ParentDashboard } from "./components/ParentDashboard";
 import { WelcomeScreen } from "./components/WelcomeScreen";
+import { RewardsView } from "./components/RewardsView";
 import { BuddyMascot } from "./components/BuddyMascot";
-import type { ChecklistItem, DayState, SchoolSettings, WeekDay } from "./types";
-import { DEFAULT_SETTINGS } from "./types";
+import type { ChecklistItem, DayState, SchoolSettings, WeekDay, RewardState } from "./types";
+import { DEFAULT_SETTINGS, DEFAULT_REWARD_STATE } from "./types";
 
 export type { ChecklistItem };
 export type { SchoolSettings };
@@ -48,8 +49,8 @@ function getTodayWeekDay(): WeekDay | null {
   return d as WeekDay;
 }
 
-type ChildView = "checklist" | "manage" | "settings";
-type ParentView = "parent" | "manage";
+type ChildView = "checklist" | "rewards" | "manage" | "settings";
+type ParentView = "parent" | "rewards" | "manage";
 
 export default function App() {
   const [role, setRole] = useState<UserRole | null>(() => {
@@ -77,6 +78,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
   });
 
+  const [rewardState, setRewardState] = useState<RewardState>(() => {
+    const saved = localStorage.getItem("bagbuddy_rewards");
+    return saved ? JSON.parse(saved) : DEFAULT_REWARD_STATE;
+  });
+
   const [childView, setChildView] = useState<ChildView>("checklist");
   const [parentView, setParentView] = useState<ParentView>("parent");
   const [celebrating, setCelebrating] = useState(false);
@@ -98,6 +104,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("bagbuddy_settings", JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem("bagbuddy_rewards", JSON.stringify(rewardState));
+  }, [rewardState]);
 
   // Timetable-suggested items for today
   const todayWeekDay = getTodayWeekDay();
@@ -163,6 +173,7 @@ export default function App() {
   if (role === "child") {
     const childNavItems = [
       { id: "checklist" as ChildView, label: "Today", emoji: "🎒" },
+      { id: "rewards" as ChildView, label: "Rewards", emoji: "⭐" },
       { id: "manage" as ChildView, label: "My Items", emoji: "📋" },
       { id: "settings" as ChildView, label: "Settings", emoji: "⚙️" },
     ];
@@ -199,6 +210,14 @@ export default function App() {
             />
           </>
         )}
+        {childView === "rewards" && (
+          <RewardsView
+            rewardState={rewardState}
+            onUpdate={setRewardState}
+            isParent={false}
+            studentName={studentName}
+          />
+        )}
         {childView === "manage" && (
           <ManageItems items={items} setItems={setItems} />
         )}
@@ -212,6 +231,7 @@ export default function App() {
   // ── PARENT MODE ───────────────────────────────────────────────────────────
   const parentNavItems = [
     { id: "parent" as ParentView, label: "Dashboard", emoji: "👨‍👩‍👧" },
+    { id: "rewards" as ParentView, label: "Rewards", emoji: "⭐" },
     { id: "manage" as ParentView, label: "Items", emoji: "📋" },
   ];
 
@@ -236,6 +256,14 @@ export default function App() {
           />
         </>
       )}
+      {parentView === "rewards" && (
+        <RewardsView
+          rewardState={rewardState}
+          onUpdate={setRewardState}
+          isParent={true}
+          studentName={studentName}
+        />
+      )}
       {parentView === "manage" && (
         <ManageItems items={items} setItems={setItems} />
       )}
@@ -255,10 +283,7 @@ function SwitchRoleBanner({ role, onSwitch }: { role: UserRole; onSwitch: () => 
     >
       <div className="flex items-center gap-2">
         <span className="text-lg">{role === "child" ? "🧒" : "👨‍👩‍👧"}</span>
-        <span
-          className="text-sm font-bold"
-          style={{ color: role === "child" ? "#92400e" : "#4c1d95" }}
-        >
+        <span className="text-sm font-bold" style={{ color: role === "child" ? "#92400e" : "#4c1d95" }}>
           {role === "child" ? "Child Mode" : "Parent Mode"}
         </span>
       </div>
