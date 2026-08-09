@@ -106,6 +106,70 @@ export function ParentDashboard({
         )}
       </div>
 
+      {/* Read-only checklist */}
+      <div
+        className="rounded-3xl p-5 mb-4"
+        style={{ background: "var(--panel)", border: "1.5px solid var(--line)" }}
+      >
+        <h2 className="font-bold text-base mb-1" style={{ fontFamily: "Fraunces, serif", color: "var(--ink)" }}>
+          📋 Today's Checklist
+        </h2>
+        <p className="text-xs mb-4" style={{ color: "var(--muted)" }}>
+          Read-only — only {studentName} can tick items
+        </p>
+        {items.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--muted)" }}>No items added yet.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {items.map((item) => {
+              const isChecked = checkedIds.includes(item.id);
+              const color = CATEGORY_COLORS[item.category as keyof typeof CATEGORY_COLORS] ?? "#ec4899";
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                  style={{
+                    background: isChecked ? "#f0fdf4" : "var(--paper)",
+                    border: `1.5px solid ${isChecked ? "#6ee7b7" : "var(--line)"}`,
+                    opacity: isChecked ? 0.75 : 1,
+                  }}
+                >
+                  {/* Fake checkbox — not clickable */}
+                  <div
+                    className="rounded-lg flex items-center justify-center shrink-0"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      background: isChecked ? "#10b981" : "var(--paper)",
+                      border: `2px solid ${isChecked ? "#10b981" : color}`,
+                    }}
+                  >
+                    {isChecked && (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M2 7l4 4 6-6" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-base">{item.emoji}</span>
+                  <span
+                    className="font-semibold text-sm flex-1"
+                    style={{
+                      color: isChecked ? "#059669" : "var(--ink)",
+                      textDecoration: isChecked ? "line-through" : "none",
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                  {isChecked && (
+                    <span className="text-xs font-bold" style={{ color: "#10b981" }}>✓ Packed</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Missing items alert */}
       {!allDone && missing.length > 0 && (
         <div
@@ -126,29 +190,6 @@ export function ParentDashboard({
                   {item.emoji} {item.label}
                 </span>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Packed items */}
-      {packed.length > 0 && (
-        <div
-          className="rounded-3xl p-5 mb-4"
-          style={{ background: "var(--panel)", border: "1.5px solid var(--line)" }}
-        >
-          <h2 className="font-bold text-base mb-3" style={{ fontFamily: "Fraunces, serif", color: "var(--ink)" }}>
-            ✅ Already Packed ({packed.length})
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {packed.map((item) => (
-              <span
-                key={item.id}
-                className="text-xs font-bold px-2.5 py-1.5 rounded-xl"
-                style={{ background: "#d1fae5", color: "#065f46", border: "1px solid #6ee7b7" }}
-              >
-                {item.emoji} {item.label}
-              </span>
             ))}
           </div>
         </div>
