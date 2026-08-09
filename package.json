@@ -1,0 +1,14 @@
+{
+  "name": "bag-buddy",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": { "node": ">=22" },
+  "pnpm": { "onlyBuiltDependencies": ["esbuild"] },
+  "scripts": {
+    "dev": "pnpm --filter @bag-buddy/web dev",
+    "build": "pnpm --filter @bag-buddy/web build",
+    "preview": "pnpm --filter @bag-buddy/web preview",
+    "typecheck": "pnpm --filter @bag-buddy/web exec tsc -b",
+    "test": "pnpm --filter @bag-buddy/web test"
+  }
+}
