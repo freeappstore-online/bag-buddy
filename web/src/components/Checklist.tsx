@@ -1,16 +1,19 @@
 import { useState } from "react";
-import type { ChecklistItem, Category } from "../App";
+import type { ChecklistItem, Category, Subject, WeekDay } from "../types";
 import { CATEGORY_COLORS } from "../App";
 import { BuddyMascot } from "./BuddyMascot";
 
 interface ChecklistProps {
-  items: ChecklistItem[];
+  items: (ChecklistItem & { fromTimetable?: boolean })[];
   checkedIds: string[];
   onToggle: (id: string) => void;
   onReset: () => void;
   checkedCount: number;
   totalItems: number;
   allDone: boolean;
+  studentName?: string;
+  todaySubjects?: Subject[];
+  todayWeekDay?: WeekDay | null;
 }
 
 const CATEGORY_LABELS: Record<Category, string> = {
@@ -32,6 +35,9 @@ export function Checklist({
   checkedCount,
   totalItems,
   allDone,
+  studentName,
+  todaySubjects = [],
+  todayWeekDay,
 }: ChecklistProps) {
   const [recentlyChecked, setRecentlyChecked] = useState<Set<string>>(new Set());
 
@@ -58,11 +64,16 @@ export function Checklist({
     catItems: items.filter((i) => i.category === cat),
   })).filter(({ catItems }) => catItems.length > 0);
 
+  // Timetable items (fromTimetable) grouped separately
+  const timetableItems = items.filter((i) => (i as any).fromTimetable);
+
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
+
+  const greeting = studentName ? `Hey ${studentName}! 👋` : "Pack your bag!";
 
   return (
     <div className="max-w-lg mx-auto">
@@ -83,7 +94,7 @@ export function Checklist({
             className="text-2xl font-bold leading-tight"
             style={{ fontFamily: "Fraunces, serif" }}
           >
-            {allDone ? "All packed! 🎉" : "Pack your bag!"}
+            {allDone ? "All packed! 🎉" : greeting}
           </h1>
           <p className="text-sm opacity-90 mt-1">
             {allDone
@@ -92,6 +103,20 @@ export function Checklist({
               ? "Nothing to pack today!"
               : `${remaining} item${remaining !== 1 ? "s" : ""} left to pack`}
           </p>
+          {/* Today's subjects */}
+          {todaySubjects.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {todaySubjects.map((s) => (
+                <span
+                  key={s.label}
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: "rgba(255,255,255,0.25)", color: "white" }}
+                >
+                  {s.emoji} {s.label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -118,6 +143,30 @@ export function Checklist({
           />
         </div>
       </div>
+
+      {/* Timetable items for today (if any) */}
+      {timetableItems.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <div className="w-2 h-2 rounded-full" style={{ background: "#10b981" }} />
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted)" }}>
+              📅 Today's Timetable Extras
+            </span>
+          </div>
+          <div className="flex flex-col gap-2">
+            {timetableItems.map((item) => (
+              <CheckItem
+                key={item.id}
+                item={item}
+                checked={checkedIds.includes(item.id)}
+                animating={recentlyChecked.has(item.id)}
+                onToggle={() => handleToggle(item.id)}
+                accent="#10b981"
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Checklist by category */}
       <div className="flex flex-col gap-4 mb-6">
@@ -178,7 +227,7 @@ export function Checklist({
             No items yet!
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            Go to "My Items" to add things to your bag checklist.
+            Go to "My Items" to add things, or set up your timetable in Settings.
           </p>
         </div>
       )}
@@ -187,14 +236,15 @@ export function Checklist({
 }
 
 interface CheckItemProps {
-  item: ChecklistItem;
+  item: ChecklistItem & { fromTimetable?: boolean };
   checked: boolean;
   animating: boolean;
   onToggle: () => void;
+  accent?: string;
 }
 
-function CheckItem({ item, checked, animating, onToggle }: CheckItemProps) {
-  const color = CATEGORY_COLORS[item.category];
+function CheckItem({ item, checked, animating, onToggle, accent }: CheckItemProps) {
+  const color = accent ?? CATEGORY_COLORS[item.category as Category] ?? "#6366f1";
 
   return (
     <button

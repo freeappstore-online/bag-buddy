@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ChecklistItem, Category } from "../App";
+import type { ChecklistItem, Category } from "../types";
 import { CATEGORY_COLORS } from "../App";
 
 interface ManageItemsProps {
@@ -34,7 +34,6 @@ export function ManageItems({ items, setItems }: ManageItemsProps) {
   const [newCategory, setNewCategory] = useState<Category>("other");
   const [newEmoji, setNewEmoji] = useState("🎒");
   const [newRecurring, setNewRecurring] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const handleAdd = () => {
@@ -65,7 +64,6 @@ export function ManageItems({ items, setItems }: ManageItemsProps) {
     setNewRecurring(true);
     setShowAdd(false);
     setShowEmojiPicker(false);
-    setEditingId(null);
   };
 
   return (
@@ -76,7 +74,7 @@ export function ManageItems({ items, setItems }: ManageItemsProps) {
           className="text-3xl font-bold"
           style={{ fontFamily: "Fraunces, serif", color: "var(--ink)" }}
         >
-          My Items ⚙️
+          My Items 📋
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
           Customise your daily packing checklist
