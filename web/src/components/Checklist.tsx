@@ -17,15 +17,50 @@ interface ChecklistProps {
 }
 
 const CATEGORY_LABELS: Record<Category, string> = {
-  books: "Books & Notes",
-  supplies: "Supplies",
-  pe: "PE & Sports",
-  lunch: "Lunch & Drinks",
-  tech: "Tech",
-  other: "Other",
+  books: "📚 Books & Notes",
+  supplies: "✏️ Supplies",
+  pe: "👟 PE & Sports",
+  lunch: "🍱 Lunch & Drinks",
+  tech: "💻 Tech",
+  other: "🎒 Other",
+};
+
+const CATEGORY_BG: Record<Category, string> = {
+  books: "linear-gradient(135deg, #ede9fe, #ddd6fe)",
+  supplies: "linear-gradient(135deg, #fef3c7, #fde68a)",
+  pe: "linear-gradient(135deg, #d1fae5, #a7f3d0)",
+  lunch: "linear-gradient(135deg, #ffedd5, #fed7aa)",
+  tech: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
+  other: "linear-gradient(135deg, #fce7f3, #fbcfe8)",
+};
+
+const CATEGORY_BORDER: Record<Category, string> = {
+  books: "#c4b5fd",
+  supplies: "#fcd34d",
+  pe: "#6ee7b7",
+  lunch: "#fdba74",
+  tech: "#93c5fd",
+  other: "#f9a8d4",
 };
 
 const CATEGORIES: Category[] = ["books", "supplies", "pe", "lunch", "tech", "other"];
+
+// Fun encouraging messages as items get checked
+const ENCOURAGEMENTS = [
+  "Nice one! 🙌", "Boom! ✅", "You got it! 💪", "Legend! 🌟",
+  "Smashed it! 🎯", "Yes!! 🎉", "Go you! 🚀", "Amazing! ✨",
+];
+
+// Progress messages based on percentage
+function getProgressMessage(pct: number, name?: string) {
+  const n = name || "You";
+  if (pct === 0) return `Let's go, ${n}! 🚀`;
+  if (pct < 25) return `Great start, ${n}! Keep it up! 💪`;
+  if (pct < 50) return `Halfway there, ${n}! 🔥`;
+  if (pct < 75) return `Looking great, ${n}! Almost done! ⭐`;
+  if (pct < 100) return `So close, ${n}! Finish strong! 🏁`;
+  return `${n}'s bag is PACKED! 🎉`;
+}
 
 export function Checklist({
   items,
@@ -40,12 +75,15 @@ export function Checklist({
   todayWeekDay,
 }: ChecklistProps) {
   const [recentlyChecked, setRecentlyChecked] = useState<Set<string>>(new Set());
+  const [encouragement, setEncouragement] = useState<string | null>(null);
 
   const handleToggle = (id: string) => {
     const wasUnchecked = !checkedIds.includes(id);
     onToggle(id);
     if (wasUnchecked) {
       setRecentlyChecked((prev) => new Set([...prev, id]));
+      const msg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+      setEncouragement(msg);
       setTimeout(() => {
         setRecentlyChecked((prev) => {
           const next = new Set(prev);
@@ -53,260 +91,274 @@ export function Checklist({
           return next;
         });
       }, 600);
+      setTimeout(() => setEncouragement(null), 1200);
     }
   };
 
   const progress = totalItems > 0 ? (checkedCount / totalItems) * 100 : 0;
-  const remaining = totalItems - checkedCount;
+  const progressPct = Math.round(progress);
 
-  const itemsByCategory = CATEGORIES.map((cat) => ({
+  // Group items by category
+  const grouped = CATEGORIES.map((cat) => ({
     cat,
     catItems: items.filter((i) => i.category === cat),
   })).filter(({ catItems }) => catItems.length > 0);
 
-  // Timetable items (fromTimetable) grouped separately
-  const timetableItems = items.filter((i) => (i as any).fromTimetable);
-
-  const today = new Date().toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-
-  const greeting = studentName ? `Hey ${studentName}! 👋` : "Pack your bag!";
+  // Progress bar colour based on completion
+  const barColor =
+    progressPct === 100
+      ? "linear-gradient(90deg, #10b981, #34d399)"
+      : progressPct >= 50
+      ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
+      : "linear-gradient(90deg, #6366f1, #a78bfa)";
 
   return (
-    <div className="max-w-lg mx-auto">
-      {/* Header card */}
+    <div className="flex flex-col gap-5">
+
+      {/* ── Hero progress card ── */}
       <div
-        className="rounded-3xl p-5 mb-5 flex items-center gap-4"
+        className="rounded-3xl p-5 flex flex-col gap-4"
         style={{
-          background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-          color: "white",
+          background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)",
+          boxShadow: "0 8px 32px rgba(99,102,241,0.35)",
         }}
       >
-        <BuddyMascot size={72} happy={allDone} />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs opacity-80 font-semibold uppercase tracking-wider mb-0.5">
-            {today}
-          </p>
-          <h1
-            className="text-2xl font-bold leading-tight"
-            style={{ fontFamily: "Fraunces, serif" }}
-          >
-            {allDone ? "All packed! 🎉" : greeting}
-          </h1>
-          <p className="text-sm opacity-90 mt-1">
-            {allDone
-              ? "Have a great day at school!"
-              : remaining === 0
-              ? "Nothing to pack today!"
-              : `${remaining} item${remaining !== 1 ? "s" : ""} left to pack`}
-          </p>
-          {/* Today's subjects */}
-          {todaySubjects.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {todaySubjects.map((s) => (
-                <span
-                  key={s.label}
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(255,255,255,0.25)", color: "white" }}
-                >
-                  {s.emoji} {s.label}
-                </span>
-              ))}
+        {/* Top row: mascot + message */}
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            <BuddyMascot size={72} happy={allDone} />
+            {allDone && (
+              <span
+                className="absolute -top-1 -right-1 text-xl"
+                style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}
+              >
+                🏆
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className="text-white font-bold text-lg leading-tight"
+              style={{ fontFamily: "Fraunces, serif", textShadow: "0 1px 4px rgba(0,0,0,0.2)" }}
+            >
+              {getProgressMessage(progressPct, studentName)}
+            </p>
+            <p className="text-white/80 text-sm mt-1">
+              {checkedCount} of {totalItems} items packed
+            </p>
+          </div>
+          {/* Floating encouragement */}
+          {encouragement && (
+            <div
+              className="absolute right-6 text-white font-black text-lg pointer-events-none"
+              style={{
+                animation: "floatUp 1.2s ease-out forwards",
+                textShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                zIndex: 10,
+              }}
+            >
+              {encouragement}
             </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div>
+          <div
+            className="w-full rounded-full overflow-hidden"
+            style={{ height: 14, background: "rgba(255,255,255,0.25)" }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progressPct}%`,
+                background: "white",
+                boxShadow: "0 0 12px rgba(255,255,255,0.6)",
+              }}
+            />
+          </div>
+          <div className="flex justify-between mt-1.5">
+            <span className="text-white/70 text-xs font-semibold">0%</span>
+            <span className="text-white font-black text-sm">{progressPct}%</span>
+            <span className="text-white/70 text-xs font-semibold">100%</span>
+          </div>
+        </div>
+
+        {/* Star count badge */}
+        <div className="flex items-center gap-2">
+          <span
+            className="px-3 py-1.5 rounded-2xl text-sm font-bold flex items-center gap-1.5"
+            style={{ background: "rgba(255,255,255,0.2)", color: "white" }}
+          >
+            ⭐ {checkedCount} star{checkedCount !== 1 ? "s" : ""} earned today
+          </span>
+          {allDone && (
+            <span
+              className="px-3 py-1.5 rounded-2xl text-sm font-bold"
+              style={{ background: "#fbbf24", color: "#78350f" }}
+            >
+              🏆 All done!
+            </span>
           )}
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="mb-5 px-1">
-        <div className="flex justify-between text-sm font-semibold mb-2" style={{ color: "var(--ink)" }}>
-          <span>Progress</span>
-          <span style={{ color: "#6366f1" }}>
-            {checkedCount}/{totalItems}
-          </span>
-        </div>
+      {/* ── Today's subjects (if school timetable set) ── */}
+      {todayWeekDay && todaySubjects.length > 0 && (
         <div
-          className="rounded-full overflow-hidden"
-          style={{ height: 12, background: "var(--line)" }}
+          className="rounded-2xl p-4"
+          style={{
+            background: "linear-gradient(135deg, #fef3c7, #fde68a)",
+            border: "2px solid #fcd34d",
+          }}
         >
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${progress}%`,
-              background: allDone
-                ? "linear-gradient(90deg, #10b981, #34d399)"
-                : "linear-gradient(90deg, #6366f1, #a78bfa)",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Timetable items for today (if any) */}
-      {timetableItems.length > 0 && (
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2 px-1">
-            <div className="w-2 h-2 rounded-full" style={{ background: "#10b981" }} />
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted)" }}>
-              📅 Today's Timetable Extras
-            </span>
-          </div>
-          <div className="flex flex-col gap-2">
-            {timetableItems.map((item) => (
-              <CheckItem
-                key={item.id}
-                item={item}
-                checked={checkedIds.includes(item.id)}
-                animating={recentlyChecked.has(item.id)}
-                onToggle={() => handleToggle(item.id)}
-                accent="#10b981"
-              />
+          <p className="font-black text-sm mb-2" style={{ color: "#78350f", fontFamily: "Fraunces, serif" }}>
+            📅 Today's subjects — {todayWeekDay}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {todaySubjects.map((s, i) => (
+              <span
+                key={i}
+                className="px-3 py-1 rounded-full text-xs font-bold"
+                style={{ background: "#fef3c7", color: "#92400e", border: "1.5px solid #fcd34d" }}
+              >
+                {s.emoji} {s.label}
+              </span>
             ))}
           </div>
         </div>
       )}
 
-      {/* Checklist by category */}
-      <div className="flex flex-col gap-4 mb-6">
-        {itemsByCategory.map(({ cat, catItems }) => (
-          <div key={cat}>
-            <div className="flex items-center gap-2 mb-2 px-1">
-              <div
-                className="w-2 h-2 rounded-full"
-                style={{ background: CATEGORY_COLORS[cat] }}
-              />
-              <span
-                className="text-xs font-bold uppercase tracking-wider"
-                style={{ color: "var(--muted)" }}
-              >
-                {CATEGORY_LABELS[cat]}
-              </span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {catItems.map((item) => (
-                <CheckItem
-                  key={item.id}
-                  item={item}
-                  checked={checkedIds.includes(item.id)}
-                  animating={recentlyChecked.has(item.id)}
-                  onToggle={() => handleToggle(item.id)}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Reset button */}
-      {checkedCount > 0 && (
-        <div className="flex justify-center mb-8">
-          <button
-            onClick={onReset}
-            className="text-sm font-semibold px-5 py-2 rounded-xl transition-all"
+      {/* ── Checklist by category ── */}
+      {grouped.map(({ cat, catItems }) => (
+        <div key={cat} className="flex flex-col gap-2">
+          {/* Category header */}
+          <div
+            className="px-4 py-2 rounded-2xl inline-flex items-center gap-2 self-start"
             style={{
-              background: "var(--panel)",
-              color: "var(--muted)",
-              border: "1.5px solid var(--line)",
+              background: CATEGORY_BG[cat],
+              border: `2px solid ${CATEGORY_BORDER[cat]}`,
             }}
           >
-            🔄 Reset for Today
-          </button>
-        </div>
-      )}
+            <span className="text-sm font-black" style={{ color: CATEGORY_COLORS[cat] }}>
+              {CATEGORY_LABELS[cat]}
+            </span>
+            <span
+              className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: CATEGORY_COLORS[cat], color: "white" }}
+            >
+              {catItems.filter((i) => checkedIds.includes(i.id)).length}/{catItems.length}
+            </span>
+          </div>
 
-      {/* Empty state */}
-      {totalItems === 0 && (
-        <div
-          className="rounded-3xl p-8 text-center"
-          style={{ background: "var(--panel)" }}
-        >
-          <div style={{ fontSize: 48 }}>🎒</div>
-          <p className="font-semibold mt-3" style={{ color: "var(--ink)" }}>
+          {/* Items */}
+          <div className="flex flex-col gap-2">
+            {catItems.map((item) => {
+              const isChecked = checkedIds.includes(item.id);
+              const isNew = recentlyChecked.has(item.id);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleToggle(item.id)}
+                  className="w-full text-left flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all duration-200 active:scale-95"
+                  style={{
+                    background: isChecked
+                      ? `linear-gradient(135deg, ${CATEGORY_BG[cat].replace("linear-gradient(135deg, ", "").split(",")[0]}, ${CATEGORY_BG[cat].replace("linear-gradient(135deg, ", "").split(",")[1].trim().replace(")", "")})`
+                      : "var(--panel)",
+                    border: isChecked
+                      ? `2.5px solid ${CATEGORY_BORDER[cat]}`
+                      : "2px solid var(--line)",
+                    transform: isNew ? "scale(1.03)" : undefined,
+                    boxShadow: isChecked
+                      ? `0 4px 16px ${CATEGORY_COLORS[cat]}30`
+                      : "0 2px 8px rgba(0,0,0,0.04)",
+                  }}
+                >
+                  {/* Big emoji */}
+                  <span
+                    className="text-2xl shrink-0 transition-transform duration-200"
+                    style={{ transform: isChecked ? "scale(1.2) rotate(5deg)" : "scale(1)" }}
+                  >
+                    {item.emoji}
+                  </span>
+
+                  {/* Label */}
+                  <span
+                    className="flex-1 font-bold text-base"
+                    style={{
+                      color: isChecked ? CATEGORY_COLORS[cat] : "var(--ink)",
+                      textDecoration: isChecked ? "line-through" : "none",
+                      opacity: isChecked ? 0.75 : 1,
+                    }}
+                  >
+                    {item.label}
+                    {item.fromTimetable && (
+                      <span
+                        className="ml-2 text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                        style={{ background: "#fef3c7", color: "#92400e" }}
+                      >
+                        today
+                      </span>
+                    )}
+                  </span>
+
+                  {/* Checkbox */}
+                  <div
+                    className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
+                    style={{
+                      background: isChecked ? CATEGORY_COLORS[cat] : "var(--paper)",
+                      border: isChecked ? `2px solid ${CATEGORY_COLORS[cat]}` : "2.5px solid var(--line)",
+                      boxShadow: isChecked ? `0 0 0 3px ${CATEGORY_COLORS[cat]}30` : "none",
+                    }}
+                  >
+                    {isChecked && (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M3 8l3.5 3.5L13 5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* ── Empty state ── */}
+      {items.length === 0 && (
+        <div className="flex flex-col items-center gap-4 py-12">
+          <span className="text-6xl">🎒</span>
+          <p className="font-black text-xl text-center" style={{ fontFamily: "Fraunces, serif", color: "var(--ink)" }}>
             No items yet!
           </p>
-          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            Go to "My Items" to add things, or set up your timetable in Settings.
+          <p className="text-sm text-center" style={{ color: "var(--muted)" }}>
+            Go to "My Items" to add things to your bag
           </p>
         </div>
       )}
-    </div>
-  );
-}
 
-interface CheckItemProps {
-  item: ChecklistItem & { fromTimetable?: boolean };
-  checked: boolean;
-  animating: boolean;
-  onToggle: () => void;
-  accent?: string;
-}
-
-function CheckItem({ item, checked, animating, onToggle, accent }: CheckItemProps) {
-  const color = accent ?? CATEGORY_COLORS[item.category as Category] ?? "#6366f1";
-
-  return (
-    <button
-      onClick={onToggle}
-      className="w-full text-left flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all duration-200 active:scale-95"
-      style={{
-        background: checked ? `${color}18` : "var(--panel)",
-        border: `2px solid ${checked ? color : "var(--line)"}`,
-        transform: animating ? "scale(1.04)" : undefined,
-        transition: "all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
-      }}
-    >
-      {/* Checkbox */}
-      <div
-        className="shrink-0 flex items-center justify-center rounded-full transition-all duration-200"
-        style={{
-          width: 28,
-          height: 28,
-          background: checked ? color : "transparent",
-          border: `2.5px solid ${checked ? color : "var(--line-strong)"}`,
-        }}
-      >
-        {checked && (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path
-              d="M2.5 7L5.5 10L11.5 4"
-              stroke="white"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
-      </div>
-
-      {/* Emoji */}
-      <span style={{ fontSize: 22 }}>{item.emoji}</span>
-
-      {/* Label */}
-      <span
-        className="flex-1 font-semibold text-base"
-        style={{
-          color: checked ? "var(--muted)" : "var(--ink)",
-          textDecoration: checked ? "line-through" : "none",
-          transition: "all 0.2s",
-        }}
-      >
-        {item.label}
-      </span>
-
-      {/* Recurring badge */}
-      {item.recurring && (
-        <span
-          className="text-xs font-bold px-2 py-0.5 rounded-full"
+      {/* ── Reset button ── */}
+      {checkedCount > 0 && (
+        <button
+          onClick={onReset}
+          className="w-full py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 mt-2"
           style={{
-            background: `${color}22`,
-            color: color,
+            background: "var(--panel)",
+            color: "var(--muted)",
+            border: "2px dashed var(--line)",
           }}
         >
-          Daily
-        </span>
+          🔄 Start fresh for tomorrow
+        </button>
       )}
-    </button>
+
+      {/* Float-up animation */}
+      <style>{`
+        @keyframes floatUp {
+          0% { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+        }
+      `}</style>
+    </div>
   );
 }
