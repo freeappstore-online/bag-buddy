@@ -7,7 +7,7 @@ import { ParentDashboard } from "./components/ParentDashboard";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { RewardsView } from "./components/RewardsView";
 import { BuddyMascot } from "./components/BuddyMascot";
-import type { ChecklistItem, DayState, SchoolSettings, WeekDay, RewardState } from "./types";
+import type { ChecklistItem, DayState, SchoolSettings, WeekDay, RewardState, EventOption } from "./types";
 import { DEFAULT_SETTINGS, DEFAULT_REWARD_STATE } from "./types";
 
 export type { ChecklistItem };
@@ -25,7 +25,7 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   other: "#ec4899",
 };
 
-const DEFAULT_ITEMS: ChecklistItem[] = [
+const SCHOOL_DEFAULT_ITEMS: ChecklistItem[] = [
   { id: "item_1", label: "Textbooks", category: "books", recurring: true, emoji: "📚" },
   { id: "item_2", label: "Notebook", category: "books", recurring: true, emoji: "📓" },
   { id: "item_3", label: "Pencil Case", category: "supplies", recurring: true, emoji: "✏️" },
@@ -49,18 +49,35 @@ function getTodayWeekDay(): WeekDay | null {
   return d as WeekDay;
 }
 
+function eventItemsToChecklist(event: EventOption): ChecklistItem[] {
+  return event.defaultItems.map((item, i) => ({
+    id: `event_${event.id}_${i}`,
+    label: item.label,
+    category: item.category,
+    recurring: true,
+    emoji: item.emoji,
+  }));
+}
+
 type ChildView = "checklist" | "rewards" | "manage" | "settings";
 type ParentView = "parent" | "rewards" | "manage";
 
+interface Session {
+  role: UserRole;
+  eventId: string;
+  eventLabel: string;
+  eventEmoji: string;
+}
+
 export default function App() {
-  const [role, setRole] = useState<UserRole | null>(() => {
-    const saved = localStorage.getItem("bagbuddy_role");
-    return (saved as UserRole) ?? null;
+  const [session, setSession] = useState<Session | null>(() => {
+    const saved = localStorage.getItem("bagbuddy_session");
+    return saved ? JSON.parse(saved) : null;
   });
 
   const [items, setItems] = useState<ChecklistItem[]>(() => {
     const saved = localStorage.getItem("bagbuddy_items");
-    return saved ? JSON.parse(saved) : DEFAULT_ITEMS;
+    return saved ? JSON.parse(saved) : SCHOOL_DEFAULT_ITEMS;
   });
 
   const [dayState, setDayState] = useState<DayState>(() => {
@@ -89,9 +106,9 @@ export default function App() {
   const [justCompleted, setJustCompleted] = useState(false);
 
   useEffect(() => {
-    if (role) localStorage.setItem("bagbuddy_role", role);
-    else localStorage.removeItem("bagbuddy_role");
-  }, [role]);
+    if (session) localStorage.setItem("bagbuddy_session", JSON.stringify(session));
+    else localStorage.removeItem("bagbuddy_session");
+  }, [session]);
 
   useEffect(() => {
     localStorage.setItem("bagbuddy_items", JSON.stringify(items));
@@ -109,12 +126,16 @@ export default function App() {
     localStorage.setItem("bagbuddy_rewards", JSON.stringify(rewardState));
   }, [rewardState]);
 
-  // Timetable-suggested items for today
+  // Timetable-suggested items for today (school mode only)
   const todayWeekDay = getTodayWeekDay();
-  const todaySchedule = todayWeekDay ? settings.schedule[todayWeekDay] : undefined;
-  const todaySubjectItems: string[] = todaySchedule && !todaySchedule.dayOff
-    ? Array.from(new Set(todaySchedule.subjects.flatMap((s) => s.suggestedItems ?? [])))
-    : [];
+  const todaySchedule =
+    session?.eventId === "school" && todayWeekDay
+      ? settings.schedule[todayWeekDay]
+      : undefined;
+  const todaySubjectItems: string[] =
+    todaySchedule && !todaySchedule.dayOff
+      ? Array.from(new Set(todaySchedule.subjects.flatMap((s) => s.suggestedItems ?? [])))
+      : [];
 
   const effectiveItems: ChecklistItem[] = [
     ...items,
@@ -147,14 +168,14 @@ export default function App() {
   const allDone = totalItems > 0 && checkedCount === totalItems;
 
   useEffect(() => {
-    if (allDone && !justCompleted && role === "child") {
+    if (allDone && !justCompleted && session?.role === "child") {
       setCelebrating(true);
       setJustCompleted(true);
     }
     if (!allDone) {
       setJustCompleted(false);
     }
-  }, [allDone, justCompleted, role]);
+  }, [allDone, justCompleted, session]);
 
   const resetDay = useCallback(() => {
     setDayState({ date: getTodayStr(), checked: [] });
@@ -165,9 +186,31 @@ export default function App() {
   const studentName = settings.studentName?.trim();
 
   // ── WELCOME SCREEN ────────────────────────────────────────────────────────
-  if (!role) {
-    return <WelcomeScreen onSelect={(r) => setRole(r)} />;
+  if (!session) {
+    return (
+      <WelcomeScreen
+        onSelect={(role, event) => {
+          // Load event-specific default items (replacing old items)
+          const newItems =
+            event.defaultItems.length > 0
+              ? eventItemsToChecklist(event)
+              : SCHOOL_DEFAULT_ITEMS;
+          setItems(newItems);
+          resetDay();
+          setSession({
+            role,
+            eventId: event.id,
+            eventLabel: event.label,
+            eventEmoji: event.emoji,
+          });
+          setChildView("checklist");
+          setParentView("parent");
+        }}
+      />
+    );
   }
+
+  const role = session.role;
 
   // ── CHILD MODE ────────────────────────────────────────────────────────────
   if (role === "child") {
@@ -195,7 +238,7 @@ export default function App() {
 
         {childView === "checklist" && (
           <>
-            <SwitchRoleBanner role="child" onSwitch={() => setRole(null)} />
+            <SwitchRoleBanner session={session} onSwitch={() => setSession(null)} />
             <Checklist
               items={effectiveItems}
               checkedIds={dayState.checked}
@@ -244,7 +287,7 @@ export default function App() {
     >
       {parentView === "parent" && (
         <>
-          <SwitchRoleBanner role="parent" onSwitch={() => setRole(null)} />
+          <SwitchRoleBanner session={session} onSwitch={() => setSession(null)} />
           <ParentDashboard
             items={effectiveItems}
             checkedIds={dayState.checked}
@@ -272,31 +315,41 @@ export default function App() {
 }
 
 // ── Switch Role Banner ────────────────────────────────────────────────────────
-function SwitchRoleBanner({ role, onSwitch }: { role: UserRole; onSwitch: () => void }) {
+function SwitchRoleBanner({ session, onSwitch }: { session: Session; onSwitch: () => void }) {
+  const isChild = session.role === "child";
   return (
     <div
-      className="flex items-center justify-between rounded-2xl px-4 py-3 mb-4"
+      className="flex items-center justify-between rounded-2xl px-4 py-3 mb-4 gap-2 flex-wrap"
       style={{
-        background: role === "child" ? "#fef3c7" : "#ede9fe",
-        border: `1.5px solid ${role === "child" ? "#fcd34d" : "#c4b5fd"}`,
+        background: isChild ? "#fef3c7" : "#ede9fe",
+        border: `1.5px solid ${isChild ? "#fcd34d" : "#c4b5fd"}`,
       }}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-lg">{role === "child" ? "🧒" : "👨‍👩‍👧"}</span>
-        <span className="text-sm font-bold" style={{ color: role === "child" ? "#92400e" : "#4c1d95" }}>
-          {role === "child" ? "Child Mode" : "Parent Mode"}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-lg">{isChild ? "🧒" : "👨‍👩‍👧"}</span>
+        <span className="text-sm font-bold" style={{ color: isChild ? "#92400e" : "#4c1d95" }}>
+          {isChild ? "Child" : "Parent"} Mode
+        </span>
+        <span
+          className="text-xs px-2 py-0.5 rounded-full font-semibold"
+          style={{
+            background: isChild ? "#fde68a" : "#ddd6fe",
+            color: isChild ? "#78350f" : "#5b21b6",
+          }}
+        >
+          {session.eventEmoji} {session.eventLabel}
         </span>
       </div>
       <button
         onClick={onSwitch}
-        className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all active:scale-95"
+        className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all active:scale-95 shrink-0"
         style={{
-          background: role === "child" ? "#f59e0b" : "#6366f1",
+          background: isChild ? "#f59e0b" : "#6366f1",
           color: "white",
           border: "none",
         }}
       >
-        {role === "child" ? "Switch to Parent" : "Switch to Child"}
+        Change ↩
       </button>
     </div>
   );
@@ -333,7 +386,7 @@ function Celebration({ name, onClose, onReset }: CelebrationProps) {
           {name ? `${name}, you're all packed!` : "You're all packed!"}
         </h2>
         <p className="text-center text-sm" style={{ color: "var(--muted)" }}>
-          Bag Buddy is proud of you! Have an amazing day at school! 🌟
+          Bag Buddy is proud of you! Have an amazing time! 🌟
         </p>
         <div className="flex gap-2 flex-wrap justify-center text-2xl">
           {["⭐", "🎒", "🏆", "✨", "🎊"].map((e, i) => (

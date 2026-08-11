@@ -6,6 +6,7 @@ export interface ChecklistItem {
   category: Category;
   recurring: boolean;
   emoji: string;
+  fromTimetable?: boolean;
 }
 
 export interface DayState {
@@ -39,6 +40,148 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
   schedule: {},
 };
 
+// ── Event / occasion ──────────────────────────────────────────────────────────
+
+export type EventType =
+  | "school"
+  | "sports"
+  | "sleepover"
+  | "daytrip"
+  | "swimming"
+  | "camping"
+  | "holiday"
+  | "party"
+  | "custom";
+
+export interface EventOption {
+  id: EventType;
+  label: string;
+  emoji: string;
+  description: string;
+  /** Default items to suggest for this event */
+  defaultItems: Array<{ label: string; emoji: string; category: Category }>;
+}
+
+export const EVENT_OPTIONS: EventOption[] = [
+  {
+    id: "school",
+    label: "School",
+    emoji: "🏫",
+    description: "A regular school day",
+    defaultItems: [
+      { label: "Textbooks", emoji: "📚", category: "books" },
+      { label: "Notebook", emoji: "📓", category: "books" },
+      { label: "Pencil Case", emoji: "✏️", category: "supplies" },
+      { label: "Water Bottle", emoji: "💧", category: "lunch" },
+      { label: "Lunch Box", emoji: "🍱", category: "lunch" },
+      { label: "Homework", emoji: "📝", category: "books" },
+    ],
+  },
+  {
+    id: "sports",
+    label: "Sports",
+    emoji: "⚽",
+    description: "Match, training or sports day",
+    defaultItems: [
+      { label: "Sports Kit", emoji: "👟", category: "pe" },
+      { label: "Water Bottle", emoji: "💧", category: "lunch" },
+      { label: "Towel", emoji: "🧺", category: "pe" },
+      { label: "Snacks", emoji: "🍌", category: "lunch" },
+      { label: "Shin Pads", emoji: "🦵", category: "pe" },
+      { label: "Sports Bag", emoji: "🎒", category: "other" },
+    ],
+  },
+  {
+    id: "sleepover",
+    label: "Sleepover",
+    emoji: "🌙",
+    description: "Staying at a friend's house",
+    defaultItems: [
+      { label: "Pyjamas", emoji: "😴", category: "other" },
+      { label: "Toothbrush", emoji: "🪥", category: "other" },
+      { label: "Change of Clothes", emoji: "👕", category: "other" },
+      { label: "Sleeping Bag", emoji: "🛏️", category: "other" },
+      { label: "Pillow", emoji: "🛌", category: "other" },
+      { label: "Phone Charger", emoji: "🔌", category: "tech" },
+    ],
+  },
+  {
+    id: "daytrip",
+    label: "Day Trip",
+    emoji: "🗺️",
+    description: "School trip or day out",
+    defaultItems: [
+      { label: "Packed Lunch", emoji: "🥪", category: "lunch" },
+      { label: "Water Bottle", emoji: "💧", category: "lunch" },
+      { label: "Sunscreen", emoji: "🧴", category: "other" },
+      { label: "Camera", emoji: "📷", category: "tech" },
+      { label: "Spending Money", emoji: "💰", category: "other" },
+      { label: "Comfortable Shoes", emoji: "👟", category: "pe" },
+    ],
+  },
+  {
+    id: "swimming",
+    label: "Swimming",
+    emoji: "🏊",
+    description: "Pool, lessons or swim club",
+    defaultItems: [
+      { label: "Swimming Costume", emoji: "🩱", category: "pe" },
+      { label: "Towel", emoji: "🧺", category: "pe" },
+      { label: "Goggles", emoji: "🥽", category: "pe" },
+      { label: "Swim Cap", emoji: "🏊", category: "pe" },
+      { label: "Flip Flops", emoji: "🩴", category: "pe" },
+      { label: "Shampoo", emoji: "🧴", category: "other" },
+    ],
+  },
+  {
+    id: "camping",
+    label: "Camping",
+    emoji: "⛺",
+    description: "Overnight camping trip",
+    defaultItems: [
+      { label: "Tent", emoji: "⛺", category: "other" },
+      { label: "Sleeping Bag", emoji: "🛏️", category: "other" },
+      { label: "Torch", emoji: "🔦", category: "other" },
+      { label: "Wellies", emoji: "🥾", category: "pe" },
+      { label: "Rain Jacket", emoji: "🧥", category: "other" },
+      { label: "Bug Spray", emoji: "🦟", category: "other" },
+    ],
+  },
+  {
+    id: "holiday",
+    label: "Holiday",
+    emoji: "✈️",
+    description: "Going away on holiday",
+    defaultItems: [
+      { label: "Passport", emoji: "🛂", category: "other" },
+      { label: "Suitcase", emoji: "🧳", category: "other" },
+      { label: "Sunscreen", emoji: "🧴", category: "other" },
+      { label: "Swimwear", emoji: "🩱", category: "pe" },
+      { label: "Chargers", emoji: "🔌", category: "tech" },
+      { label: "Spending Money", emoji: "💰", category: "other" },
+    ],
+  },
+  {
+    id: "party",
+    label: "Party",
+    emoji: "🎉",
+    description: "Birthday party or celebration",
+    defaultItems: [
+      { label: "Gift", emoji: "🎁", category: "other" },
+      { label: "Party Outfit", emoji: "👗", category: "other" },
+      { label: "Card", emoji: "💌", category: "other" },
+      { label: "Phone Charger", emoji: "🔌", category: "tech" },
+    ],
+  },
+  {
+    id: "custom",
+    label: "Something Else",
+    emoji: "✨",
+    description: "Create your own checklist",
+    defaultItems: [],
+  },
+];
+
 // ── Reward system ─────────────────────────────────────────────────────────────
 
 export interface Reward {
@@ -46,20 +189,20 @@ export interface Reward {
   title: string;
   description: string;
   emoji: string;
-  starsRequired: number; // how many stars needed to unlock
-  unlocked: boolean;     // parent marks as given
+  starsRequired: number;
+  unlocked: boolean;
 }
 
 export interface RewardState {
-  totalStars: number;       // accumulated stars
+  totalStars: number;
   rewards: Reward[];
-  history: StarEntry[];     // log of star events
+  history: StarEntry[];
 }
 
 export interface StarEntry {
   id: string;
-  date: string;        // YYYY-MM-DD
-  reason: string;      // e.g. "Packed bag perfectly!"
+  date: string;
+  reason: string;
   stars: number;
 }
 
