@@ -1,34 +1,35 @@
 import { useState } from "react";
 import { BuddyMascot } from "./BuddyMascot";
 import { EVENT_OPTIONS } from "../types";
-import type { EventOption, EventType } from "../types";
+import type { EventOption } from "../types";
 
 type UserRole = "child" | "parent";
 
 interface WelcomeScreenProps {
-  onSelect: (role: UserRole, event: EventOption) => void;
+  onSelect: (role: UserRole, event?: EventOption) => void;
 }
 
 export function WelcomeScreen({ onSelect }: WelcomeScreenProps) {
   const [step, setStep] = useState<"role" | "event">("role");
-  const [role, setRole] = useState<UserRole | null>(null);
   const [customLabel, setCustomLabel] = useState("");
 
   const handleRoleSelect = (r: UserRole) => {
-    setRole(r);
-    setStep("event");
+    if (r === "parent") {
+      // Parents go straight in — no event needed
+      onSelect("parent");
+    } else {
+      setStep("event");
+    }
   };
 
   const handleEventSelect = (event: EventOption) => {
-    if (!role) return;
     if (event.id === "custom") {
-      // For custom, use whatever label they typed, or default
-      onSelect(role, {
+      onSelect("child", {
         ...event,
         label: customLabel.trim() || "My Event",
       });
     } else {
-      onSelect(role, event);
+      onSelect("child", event);
     }
   };
 
@@ -79,6 +80,7 @@ export function WelcomeScreen({ onSelect }: WelcomeScreenProps) {
                     Pack my bag, earn stars & rewards
                   </p>
                 </div>
+                <span className="ml-auto text-2xl">→</span>
               </button>
 
               {/* Parent */}
@@ -93,18 +95,24 @@ export function WelcomeScreen({ onSelect }: WelcomeScreenProps) {
                 <span className="text-4xl">👨‍👩‍👧</span>
                 <div>
                   <p className="font-bold text-lg" style={{ fontFamily: "Fraunces, serif", color: "#78350f" }}>
-                    I'm a Parent
+                    I'm a Parent / Guardian
                   </p>
                   <p className="text-sm" style={{ color: "#92400e" }}>
-                    Monitor progress & manage rewards
+                    View progress & manage rewards
                   </p>
                 </div>
+                <span className="ml-auto text-2xl">→</span>
               </button>
             </div>
+
+            {/* Hint */}
+            <p className="text-xs mt-6 text-center px-4" style={{ color: "var(--muted)" }}>
+              💡 The child picks what they're packing for — parents just check in!
+            </p>
           </>
         )}
 
-        {/* ── STEP 2: Event ── */}
+        {/* ── STEP 2: Event (child only) ── */}
         {step === "event" && (
           <>
             {/* Back button */}
@@ -116,21 +124,13 @@ export function WelcomeScreen({ onSelect }: WelcomeScreenProps) {
               ← Back
             </button>
 
-            {/* Role badge */}
+            {/* Child badge */}
             <div
               className="flex items-center gap-2 px-4 py-2 rounded-2xl mb-5 self-start"
-              style={{
-                background: role === "child" ? "#ede9fe" : "#fef3c7",
-                border: `1.5px solid ${role === "child" ? "#c4b5fd" : "#fcd34d"}`,
-              }}
+              style={{ background: "#ede9fe", border: "1.5px solid #c4b5fd" }}
             >
-              <span>{role === "child" ? "🧒" : "👨‍👩‍👧"}</span>
-              <span
-                className="text-sm font-bold"
-                style={{ color: role === "child" ? "#4c1d95" : "#78350f" }}
-              >
-                {role === "child" ? "Child" : "Parent"} Mode
-              </span>
+              <span>🧒</span>
+              <span className="text-sm font-bold" style={{ color: "#4c1d95" }}>Child Mode</span>
             </div>
 
             <p

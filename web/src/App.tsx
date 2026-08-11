@@ -64,9 +64,10 @@ type ParentView = "parent" | "rewards" | "manage";
 
 interface Session {
   role: UserRole;
-  eventId: string;
-  eventLabel: string;
-  eventEmoji: string;
+  // Only set for child sessions
+  eventId?: string;
+  eventLabel?: string;
+  eventEmoji?: string;
 }
 
 export default function App() {
@@ -126,7 +127,6 @@ export default function App() {
     localStorage.setItem("bagbuddy_rewards", JSON.stringify(rewardState));
   }, [rewardState]);
 
-  // Timetable-suggested items for today (school mode only)
   const todayWeekDay = getTodayWeekDay();
   const todaySchedule =
     session?.eventId === "school" && todayWeekDay
@@ -190,21 +190,26 @@ export default function App() {
     return (
       <WelcomeScreen
         onSelect={(role, event) => {
-          // Load event-specific default items (replacing old items)
-          const newItems =
-            event.defaultItems.length > 0
-              ? eventItemsToChecklist(event)
-              : SCHOOL_DEFAULT_ITEMS;
-          setItems(newItems);
-          resetDay();
-          setSession({
-            role,
-            eventId: event.id,
-            eventLabel: event.label,
-            eventEmoji: event.emoji,
-          });
-          setChildView("checklist");
-          setParentView("parent");
+          if (role === "parent") {
+            // Parent goes straight to dashboard — no event needed
+            setSession({ role: "parent" });
+            setParentView("parent");
+          } else if (event) {
+            // Child picks an event → load its default items
+            const newItems =
+              event.defaultItems.length > 0
+                ? eventItemsToChecklist(event)
+                : SCHOOL_DEFAULT_ITEMS;
+            setItems(newItems);
+            resetDay();
+            setSession({
+              role: "child",
+              eventId: event.id,
+              eventLabel: event.label,
+              eventEmoji: event.emoji,
+            });
+            setChildView("checklist");
+          }
         }}
       />
     );
@@ -238,7 +243,7 @@ export default function App() {
 
         {childView === "checklist" && (
           <>
-            <SwitchRoleBanner session={session} onSwitch={() => setSession(null)} />
+            <ChildBanner session={session} onSwitch={() => setSession(null)} />
             <Checklist
               items={effectiveItems}
               checkedIds={dayState.checked}
@@ -287,7 +292,7 @@ export default function App() {
     >
       {parentView === "parent" && (
         <>
-          <SwitchRoleBanner session={session} onSwitch={() => setSession(null)} />
+          <ParentBanner onSwitch={() => setSession(null)} />
           <ParentDashboard
             items={effectiveItems}
             checkedIds={dayState.checked}
@@ -314,42 +319,58 @@ export default function App() {
   );
 }
 
-// ── Switch Role Banner ────────────────────────────────────────────────────────
-function SwitchRoleBanner({ session, onSwitch }: { session: Session; onSwitch: () => void }) {
-  const isChild = session.role === "child";
+// ── Child banner (shows event badge + change button) ──────────────────────────
+function ChildBanner({ session, onSwitch }: { session: Session; onSwitch: () => void }) {
   return (
     <div
       className="flex items-center justify-between rounded-2xl px-4 py-3 mb-4 gap-2 flex-wrap"
-      style={{
-        background: isChild ? "#fef3c7" : "#ede9fe",
-        border: `1.5px solid ${isChild ? "#fcd34d" : "#c4b5fd"}`,
-      }}
+      style={{ background: "#ede9fe", border: "1.5px solid #c4b5fd" }}
     >
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-lg">{isChild ? "🧒" : "👨‍👩‍👧"}</span>
-        <span className="text-sm font-bold" style={{ color: isChild ? "#92400e" : "#4c1d95" }}>
-          {isChild ? "Child" : "Parent"} Mode
-        </span>
-        <span
-          className="text-xs px-2 py-0.5 rounded-full font-semibold"
-          style={{
-            background: isChild ? "#fde68a" : "#ddd6fe",
-            color: isChild ? "#78350f" : "#5b21b6",
-          }}
-        >
-          {session.eventEmoji} {session.eventLabel}
-        </span>
+        <span className="text-lg">🧒</span>
+        <span className="text-sm font-bold" style={{ color: "#4c1d95" }}>Child Mode</span>
+        {session.eventEmoji && session.eventLabel && (
+          <span
+            className="text-xs px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: "#ddd6fe", color: "#5b21b6" }}
+          >
+            {session.eventEmoji} {session.eventLabel}
+          </span>
+        )}
       </div>
       <button
         onClick={onSwitch}
         className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all active:scale-95 shrink-0"
-        style={{
-          background: isChild ? "#f59e0b" : "#6366f1",
-          color: "white",
-          border: "none",
-        }}
+        style={{ background: "#6366f1", color: "white", border: "none" }}
       >
         Change ↩
+      </button>
+    </div>
+  );
+}
+
+// ── Parent banner (simple, no event badge) ────────────────────────────────────
+function ParentBanner({ onSwitch }: { onSwitch: () => void }) {
+  return (
+    <div
+      className="flex items-center justify-between rounded-2xl px-4 py-3 mb-4 gap-2"
+      style={{ background: "#fef3c7", border: "1.5px solid #fcd34d" }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-lg">👨‍👩‍👧</span>
+        <div>
+          <span className="text-sm font-bold" style={{ color: "#78350f" }}>Parent / Guardian View</span>
+          <p className="text-xs" style={{ color: "#92400e" }}>
+            Your child sets the event — you're here to check in 👀
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onSwitch}
+        className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all active:scale-95 shrink-0"
+        style={{ background: "#f59e0b", color: "white", border: "none" }}
+      >
+        Switch ↩
       </button>
     </div>
   );
